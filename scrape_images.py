@@ -3,8 +3,17 @@
 import argparse
 import os
 import urllib
+import MySQLdb
 import facebook
 from PIL import Image
+db = MySQLdb.connect(host="localhost", # your host, usually localhost
+                     user="pennapps", # your username
+                      passwd="pennapps", # your password
+                      db="pennapps") # name of the data base
+
+# you must create a Cursor object. It will let
+#  you execute all the query you need
+cur = db.cursor()
 
 def setupParser():
   parser = argparse.ArgumentParser(description="Scrape pictures from Facebook.")
@@ -14,6 +23,7 @@ def setupParser():
   return parser.parse_args()
 
 def saveFriendPhotos(facebookId, graph, visitedPhotos):
+
   foundPeople = set()
   photos = graph.get_connections(facebookId, "photos", fields="images,tags")
   for photo in photos["data"]:
@@ -25,6 +35,7 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
     for person in photo["tags"]["data"]:
       try:
         foundPeople.add(person["id"])
+        cur.execute("'INSERT INTO names names(idnames,name) VALUES('"+person["id"]+"','"+person["name"]+"'")
         # Create person directory if it doesn't already exist
         if not os.path.isdir("photos/" + person["id"]):
           os.makedirs("photos/" + person["id"])

@@ -4,12 +4,9 @@ import argparse
 import os
 import urllib
 import MySQLdb
+import sys
 import facebook
 from PIL import Image
-db = MySQLdb.connect(host="localhost", # your host, usually localhost
-                     user="pennapps", # your username
-                      passwd="pennapps", # your password
-                      db="pennapps") # name of the data base
 
 # you must create a Cursor object. It will let
 #  you execute all the query you need
@@ -24,13 +21,13 @@ def setupParser():
 def saveFriendPhotos(facebookId, graph, visitedPhotos):
 
   foundPeople = set()
-  photos = graph.get_connections(facebookId, "photos", fields="images,tags")
+  photos = graph.get_connections(facebookId, "photos", fields="source,tags")
   for photo in photos["data"]:
     if photo["id"] in visitedPhotos: continue
     visitedPhotos.add(photo["id"])
     # Download the photo from Facebook
     originalPhoto = "original_photos/" + photo["id"] + ".jpg"
-    urllib.urlretrieve(photo["images"][0]["source"], originalPhoto)
+    urllib.urlretrieve(photo["source"], originalPhoto)
     for person in photo["tags"]["data"]:
       try:
         foundPeople.add(person["id"])
@@ -50,15 +47,20 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
         dimensions = (imageTagX-subx, imageTagY-suby, imageTagX+subx, imageTagY+suby)
         area = image.crop(dimensions)
         area.save(photoLocation, "jpeg")
-        
       except KeyError:
         # Some tags seem to have missing information. I'm not sure why.
         continue
   return foundPeople
 
-def populateDB():
-    graph.get_object
-    
+def generateTrainingXML():
+  f = open('sigsets.xml','w')
+  f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<biometric-signature-set>\n")
+  dirs = os.walk('./photos').next()[1]
+  for dir in dirs:
+    for file in os.listdir("./photos/"+dir):
+      f.write("\t<biometric-signature name=\""+dir+"\">\n\t\t<presentation file-name=\""+file+"\"/>\n\t</biometric-signature>")
+  f.write("</biometric-signature-set>")
+  f.close()
 
 def main():
   args = setupParser()
@@ -69,8 +71,7 @@ def main():
   # Walk one level deeper
   for person in foundPeople:
     saveFriendPhotos(person, graph, visitedPhotos)
+  generateTrainingXML()
   
-  populateDB()
-
 if __name__ == "__main__":
   main()

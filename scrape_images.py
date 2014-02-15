@@ -35,7 +35,8 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
     for person in photo["tags"]["data"]:
       try:
         foundPeople.add(person["id"])
-        cur.execute("'INSERT INTO names names(idnames,name) VALUES('"+person["id"]+"','"+person["name"]+"'")
+        sqlformattedID = "'"+person["id"]+"'"
+        sqlformattedName = "'"+person["name"]+"'"
         # Create person directory if it doesn't already exist
         if not os.path.isdir("photos/" + person["id"]):
           os.makedirs("photos/" + person["id"])
@@ -49,6 +50,11 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
         dimensions = (imageTagX-50, imageTagY-50, imageTagX+50, imageTagY+50)
         area = image.crop(dimensions)
         area.save(photoLocation, "jpeg")
+        try:
+            sql = "INSERT INTO names VALUES("+sqlformattedID+","+sqlformattedName+")"
+            cur.execute(sql)
+        except IntegrityError: #means its already inserted/exists
+            continue
       except KeyError:
         # Some tags seem to have missing information. I'm not sure why.
         continue

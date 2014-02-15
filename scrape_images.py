@@ -40,13 +40,13 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
         photoLocation = "photos/" + person["id"] + "/" + photo["id"] + ".jpg"
         # Crop the photo so it only contains the face
         image = Image.open(originalPhoto)
-        #imageTagX = int(image.size[0] * person["x"]/100)
-        #imageTagY = int(image.size[1] * person["y"]/100)
-        imageTagX = int(person["x"])
-        imageTagY = int(person["y"])
+        imageTagX = int(image.size[0] * person["x"]/100)
+        imageTagY = int(image.size[1] * person["y"]/100)
         # TODO: We probably want to choose asubpicture size that varies by the
         # original size
-        dimensions = (imageTagX-50, imageTagY-50, imageTagX+50, imageTagY+50)
+        subx = image.size[0] * .1
+        suby = image.size[1] * .1
+        dimensions = (imageTagX-subx, imageTagY-suby, imageTagX+subx, imageTagY+suby)
         area = image.crop(dimensions)
         area.save(photoLocation, "jpeg")
         

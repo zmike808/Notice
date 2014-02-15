@@ -13,7 +13,6 @@ db = MySQLdb.connect(host="localhost", # your host, usually localhost
 
 # you must create a Cursor object. It will let
 #  you execute all the query you need
-cur = db.cursor()
 
 def setupParser():
   parser = argparse.ArgumentParser(description="Scrape pictures from Facebook.")
@@ -35,30 +34,30 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
     for person in photo["tags"]["data"]:
       try:
         foundPeople.add(person["id"])
-        sqlformattedID = "'"+person["id"]+"'"
-        sqlformattedName = "'"+person["name"]+"'"
         # Create person directory if it doesn't already exist
         if not os.path.isdir("photos/" + person["id"]):
           os.makedirs("photos/" + person["id"])
         photoLocation = "photos/" + person["id"] + "/" + photo["id"] + ".jpg"
         # Crop the photo so it only contains the face
         image = Image.open(originalPhoto)
-        imageTagX = int(image.size[0] * person["x"]/100)
-        imageTagY = int(image.size[1] * person["y"]/100)
+        #imageTagX = int(image.size[0] * person["x"]/100)
+        #imageTagY = int(image.size[1] * person["y"]/100)
+        imageTagX = int(person["x"])
+        imageTagY = int(person["y"])
         # TODO: We probably want to choose asubpicture size that varies by the
         # original size
         dimensions = (imageTagX-50, imageTagY-50, imageTagX+50, imageTagY+50)
         area = image.crop(dimensions)
         area.save(photoLocation, "jpeg")
-        try:
-            sql = "INSERT INTO names VALUES("+sqlformattedID+","+sqlformattedName+")"
-            cur.execute(sql)
-        except IntegrityError: #means its already inserted/exists
-            continue
+        
       except KeyError:
         # Some tags seem to have missing information. I'm not sure why.
         continue
   return foundPeople
+
+def populateDB():
+    graph.get_object
+    
 
 def main():
   args = setupParser()
@@ -69,6 +68,8 @@ def main():
   # Walk one level deeper
   for person in foundPeople:
     saveFriendPhotos(person, graph, visitedPhotos)
+  
+  populateDB()
 
 if __name__ == "__main__":
   main()

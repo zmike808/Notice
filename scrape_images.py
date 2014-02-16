@@ -3,7 +3,6 @@
 import argparse
 import os
 import urllib
-import MySQLdb
 import sys
 import facebook
 from PIL import Image
@@ -18,8 +17,13 @@ def setupParser():
   parser.add_argument("token", help="Facebook API access token", type=str)
   return parser.parse_args()
 
-def saveFriendPhotos(facebookId, graph, visitedPhotos):
+def populateVisitedPeople():
+  visitedPeople = set()
+  for filename in os.listdir("original_photos"):
+    visitedPeople.add(os.path.splitext(filename)[0])
+  return visitedPeople
 
+def saveFriendPhotos(facebookId, graph, visitedPhotos):
   foundPeople = set()
   photos = graph.get_connections(facebookId, "photos", fields="source,tags")
   for photo in photos["data"]:
@@ -53,25 +57,32 @@ def saveFriendPhotos(facebookId, graph, visitedPhotos):
   return foundPeople
 
 def generateTrainingXML():
-  f = open('sigsets.xml','w')
+  f = open('./photos/sigset.xml','w')
+  #count = 1
   f.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<biometric-signature-set>\n")
   dirs = os.walk('./photos').next()[1]
   for dir in dirs:
-    for file in os.listdir("./photos/"+dir):
-      f.write("\t<biometric-signature name=\""+dir+"\">\n\t\t<presentation file-name=\""+file+"\"/>\n\t</biometric-signature>")
-  f.write("</biometric-signature-set>")
+    for file in os.listdir("./photos/"+dir):#presentation name="4" file-format="jpeg" file-name="S001-04-t10_01.jpg" modality="face"/  
+      #f.write("\t<biometric-signature name=\""+dir+"\">\n\t\t<presentation name=\""+count+"\"file-format=\"jpeg\" file-name=\""dir+"/"+file+"\" modality=\"face\"/>\n\t</biometric-signature>")
+      f.write("\t<biometric-signature name=\""+dir+"\">\n\t\t<presentation file-name=\""+dir+"/"+file+"\"/>\n\t</biometric-signature>")
+      #count += 1
+  f.write("\n</biometric-signature-set>")
   f.close()
 
 def main():
   args = setupParser()
   graph = facebook.GraphAPI(args.token)
-  visitedPeople = set()
+  visitedPeople = populateVisitedPeople()
   visitedPhotos = set()
   foundPeople = saveFriendPhotos("me", graph, visitedPhotos)
   # Walk one level deeper
   for person in foundPeople:
     saveFriendPhotos(person, graph, visitedPhotos)
   generateTrainingXML()
+  os.system('br -algorithm \'Open+Cvt(Gray)+Cascade(FrontalFace)+ASEFEyes+Affine(88,88,0.25,0.35)+FTE(DFFS,instances=1)+Mask+Blur(1.1)+Gamma(0.2)+DoG(1,2)+ContrastEq(0.1,10)+LBP(1,2)+RectRegions(8,8,6,6)+Hist(59)+PCA(0.95,instances=1)+Normalize(L2)+Cat+Dup(12)+RndSubspace(0.05,1)+LDA(0.98,instances=-2)+Cat+PCA(768,instances=1)+Normalize(L1)+Quantize:MatchProbability(ByteL1)\' -path ./photos -train "sigset.xml" sofit')
+  os.system('rm ./photos/sigset.xml')
+  os.system('br -algorithm FaceRecognition -enrollAll -enroll ./photos  \'sofit.gal;sofit.csv[separator=;]\'')
+  #os.system('
   
 if __name__ == "__main__":
   main()
